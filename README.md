@@ -15,3 +15,7 @@ A script moves through these states:
 3. listo
 4. grabado
 5. publicado
+
+## Project status
+
+Week 1 of the roadmap, bulding the SQLite layer, early development.
