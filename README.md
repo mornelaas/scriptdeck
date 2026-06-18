@@ -18,4 +18,4 @@ A script moves through these states:
 
 ## Project status
 
-Week 1 of the roadmap, bulding the SQLite layer, early development.
+Week 1 of the roadmap, building the SQLite layer, early development.
