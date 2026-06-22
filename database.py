@@ -19,6 +19,18 @@ with sqlite3.connect("scriptdeck.db") as con:
     )
 
     cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS creators (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        niche TEXT,
+        handle TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+    )
+
+    cursor.execute(
         "INSERT INTO scripts (title, status, platform, hook, notes) VALUES (?, ?, ?, ?, ?)",
         ("los 3 errores al invertir", "idea", "instagram",
          "invertir mensual esta rompiendo tu portafolio", "notas del video")
