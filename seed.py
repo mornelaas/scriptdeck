@@ -2,10 +2,13 @@ import faker
 import random
 import sqlite3
 
+from models import ScriptStatus
+
+
 fake = faker.Faker()
 
 niches = ["finanzas", "fitness", "tech", "gaming", "cocina"]
-statuses = ["idea", "borrador", "listo", "grabado", "publicado"]
+statuses = [s.value for s in ScriptStatus]
 platforms = ["youtube", "tiktok", "instagram", "linkedin"]
 
 
