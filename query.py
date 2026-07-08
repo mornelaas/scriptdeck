@@ -1,5 +1,7 @@
 import sqlite3
 
+from models import ScriptStatus
+
 
 def list_creators() -> list[tuple]:
     with sqlite3.connect("scriptdeck.db") as con:
@@ -55,11 +57,11 @@ def all_creators_with_scripts() -> list[tuple]:
         return cursor.fetchall()
 
 
-def published_scripts_per_creator() -> list[tuple]:
+def scripts_per_creator_by_status(status_script: str) -> list[tuple]:
     with sqlite3.connect("scriptdeck.db") as con:
         cursor = con.cursor()
         cursor.execute(
-            "SELECT creators.name, COUNT(*) FROM scripts INNER JOIN creators ON scripts.creator_id = creators.id WHERE status = 'publicado' GROUP BY creators.name"
+            "SELECT creators.name, COUNT(*) FROM scripts INNER JOIN creators ON scripts.creator_id = creators.id WHERE status = ? GROUP BY creators.name", (status_script, )
         )
         return cursor.fetchall()
 
@@ -71,4 +73,5 @@ if __name__ == "__main__":
     print("Number of scripts per status", scripts_per_status())
     print("All the scripts with their creator", all_scripts_with_creators())
     print("All creators with their scripts", all_creators_with_scripts())
-    print("All published scripts per creator", published_scripts_per_creator())
+    print("All published scripts per creator",
+          scripts_per_creator_by_status(ScriptStatus.PUBLICADO.value))

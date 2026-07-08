@@ -1,5 +1,7 @@
 import sqlite3
 
+from models import ScriptStatus
+
 
 def update_status_script(status: str, script_id: int) -> None:
     with sqlite3.connect("scriptdeck.db") as con:
@@ -16,5 +18,5 @@ def delete_script(script_id: int) -> None:
 
 
 if __name__ == "__main__":
-    update_status_script("borrador", 1)
+    update_status_script(ScriptStatus.BORRADOR.value, 1)
     delete_script(1)
