@@ -1,9 +1,9 @@
-import faker
 import random
 import sqlite3
 
-from models import ScriptStatus
+import faker
 
+from models import ScriptStatus
 
 fake = faker.Faker()
 
@@ -22,7 +22,7 @@ def seed_creators() -> None:
             niche = random.choice(niches)
             cursor.execute(
                 "INSERT INTO creators (name, niche, handle) VALUES (?, ?, ?)",
-                (name, niche, handle)
+                (name, niche, handle),
             )
 
 
@@ -40,8 +40,9 @@ def seed_scripts() -> None:
             hook = fake.sentence(nb_words=8)
             creator_id = random.choice(creator_ids)
             cursor.execute(
-                "INSERT INTO scripts (title, status, platform, hook, creator_id) VALUES (?, ?, ?, ?, ?)",
-                (title, status, platform, hook, creator_id)
+                "INSERT INTO scripts (title, status, platform, hook, creator_id) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (title, status, platform, hook, creator_id),
             )
 
 

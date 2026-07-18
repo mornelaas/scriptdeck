@@ -7,8 +7,9 @@ def update_status_script(status: str, script_id: int) -> None:
     with sqlite3.connect("scriptdeck.db") as con:
         cursor = con.cursor()
 
-        cursor.execute("UPDATE scripts SET status = ? WHERE id = ?",
-                       (status, script_id))
+        cursor.execute(
+            "UPDATE scripts SET status = ? WHERE id = ?", (status, script_id)
+        )
 
 
 def delete_script(script_id: int) -> None:

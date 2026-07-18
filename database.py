@@ -10,7 +10,8 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS scripts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'borrador', 'listo', 'grabado', 'publicado')),
+                status TEXT NOT NULL DEFAULT 'idea'
+                CHECK (status IN ('idea', 'borrador', 'listo', 'grabado', 'publicado')),
                 platform TEXT,
                 hook TEXT,
                 notes TEXT,
