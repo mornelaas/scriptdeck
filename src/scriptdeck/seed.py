@@ -3,7 +3,7 @@ import sqlite3
 
 import faker
 
-from models import ScriptStatus
+from scriptdeck.models import ScriptStatus
 
 fake = faker.Faker()
 
