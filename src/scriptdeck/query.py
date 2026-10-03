@@ -24,8 +24,7 @@ def scripts_with_creators() -> list[tuple]:
 def scripts_per_creator() -> list[tuple]:
     with sqlite3.connect("scriptdeck.db") as con:
         cursor = con.cursor()
-        cursor.execute(
-            "SELECT creator_id, COUNT(*) FROM scripts GROUP BY creator_id")
+        cursor.execute("SELECT creator_id, COUNT(*) FROM scripts GROUP BY creator_id")
         return cursor.fetchall()
 
 
