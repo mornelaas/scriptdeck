@@ -70,6 +70,28 @@ def scripts_per_creator_by_status(status_script: str) -> list[tuple]:
         return cursor.fetchall()
 
 
+def scripts_by_creator_niche(niche: str) -> list[tuple]:
+    with sqlite3.connect("scriptdeck.db") as con:
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT title FROM scripts "
+            "WHERE creator_id IN (SELECT id FROM creators WHERE niche = ?)",
+            (niche,),
+        )
+        return cursor.fetchall()
+
+
+def creators_with_script_count() -> list[tuple]:
+    with sqlite3.connect("scriptdeck.db") as con:
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT name, (SELECT COUNT(*) FROM scripts "
+            "WHERE scripts.creator_id = creators.id) AS total "
+            "FROM creators"
+        )
+        return cursor.fetchall()
+
+
 if __name__ == "__main__":
     print("Creators and niches", list_creators())
     print("Creators with their scripts", scripts_with_creators())
