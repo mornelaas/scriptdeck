@@ -9,11 +9,13 @@ app = typer.Typer()
 
 
 @app.command()
-def list_all() -> None:
+def list_all(creator_id: int | None = None, status: str | None = None) -> None:
     """List all scripts in the database."""
-    scripts = list_scripts()
+    scripts = list_scripts(creator_id=creator_id, status=status)
     for script in scripts:
-        print(script)
+        print(
+            f"#{script[0]} title: {script[1]} status: {script[2]} platform: {script[3]}"
+        )
 
 
 @app.command()
