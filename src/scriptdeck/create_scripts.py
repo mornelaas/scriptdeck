@@ -1,4 +1,4 @@
-import sqlite3
+from .database import get_connection
 
 
 def create_script(
@@ -8,7 +8,7 @@ def create_script(
     hook: str | None = None,
     creator_id: int | None = None,
 ) -> int:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
 
         cursor.execute(

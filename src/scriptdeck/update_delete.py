@@ -1,10 +1,9 @@
-import sqlite3
-
+from .database import get_connection
 from .models import ScriptStatus
 
 
 def update_status_script(status: str, script_id: int) -> bool:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
 
         cursor.execute(
@@ -15,7 +14,7 @@ def update_status_script(status: str, script_id: int) -> bool:
 
 
 def delete_script(script_id: int) -> bool:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute("DELETE FROM scripts WHERE id = ?", (script_id,))
 

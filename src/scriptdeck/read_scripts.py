@@ -1,8 +1,8 @@
-import sqlite3
+from .database import get_connection
 
 
 def list_scripts() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
 
         cursor.execute("SELECT * FROM scripts")

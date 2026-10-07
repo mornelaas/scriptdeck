@@ -1,6 +1,13 @@
 import sqlite3
 
 
+def get_connection() -> sqlite3.Connection:
+    """Open a connection to the database with foreign keys enforced."""
+    con = sqlite3.connect("scriptdeck.db")
+    con.execute("PRAGMA foreign_keys = ON")
+    return con
+
+
 def init_db() -> None:
     with sqlite3.connect("scriptdeck.db") as con:
         cursor = con.cursor()
@@ -30,6 +37,12 @@ def init_db() -> None:
             handle TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_scripts_status ON scripts(status)
             """
         )
 
