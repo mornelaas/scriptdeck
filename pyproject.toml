@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Backend of a content manager for creators - learning sandbox"
 requires-python = ">=3.12"
 
+[project.scripts]
+scriptdeck = "scriptdeck.cli:app"
+
 [tool.ruff]
 line-length = 88
 target-version = "py312"
