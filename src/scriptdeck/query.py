@@ -1,17 +1,17 @@
-import sqlite3
-
 from scriptdeck.models import ScriptStatus
+
+from .database import get_connection
 
 
 def list_creators() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute("SELECT name, niche FROM creators")
         return cursor.fetchall()
 
 
 def scripts_with_creators() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
             "SELECT scripts.title, creators.name "
@@ -22,22 +22,21 @@ def scripts_with_creators() -> list[tuple]:
 
 
 def scripts_per_creator() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
-        cursor.execute(
-            "SELECT creator_id, COUNT(*) FROM scripts GROUP BY creator_id")
+        cursor.execute("SELECT creator_id, COUNT(*) FROM scripts GROUP BY creator_id")
         return cursor.fetchall()
 
 
 def scripts_per_status() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute("SELECT status, COUNT(*) FROM scripts GROUP BY status")
         return cursor.fetchall()
 
 
 def all_scripts_with_creators() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
             "SELECT scripts.title, creators.name "
@@ -48,7 +47,7 @@ def all_scripts_with_creators() -> list[tuple]:
 
 
 def all_creators_with_scripts() -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
             "SELECT creators.name, scripts.title "
@@ -59,7 +58,7 @@ def all_creators_with_scripts() -> list[tuple]:
 
 
 def scripts_per_creator_by_status(status_script: str) -> list[tuple]:
-    with sqlite3.connect("scriptdeck.db") as con:
+    with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
             "SELECT creators.name, COUNT(*) FROM scripts "
@@ -67,6 +66,28 @@ def scripts_per_creator_by_status(status_script: str) -> list[tuple]:
             "ON scripts.creator_id = creators.id "
             "WHERE status = ? GROUP BY creators.name",
             (status_script,),
+        )
+        return cursor.fetchall()
+
+
+def scripts_by_creator_niche(niche: str) -> list[tuple]:
+    with get_connection() as con:
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT title FROM scripts "
+            "WHERE creator_id IN (SELECT id FROM creators WHERE niche = ?)",
+            (niche,),
+        )
+        return cursor.fetchall()
+
+
+def creators_with_script_count() -> list[tuple]:
+    with get_connection() as con:
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT name, (SELECT COUNT(*) FROM scripts "
+            "WHERE scripts.creator_id = creators.id) AS total "
+            "FROM creators"
         )
         return cursor.fetchall()
 
