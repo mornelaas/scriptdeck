@@ -93,6 +93,9 @@ scriptdeck/
 ruff check .
 ruff format .
 
+# Install pre-commit hooks (runs Ruff automatically before each commit)
+pre-commit install
+
 # Seed the database with fake data
 python -m scriptdeck.seed
 ​```
