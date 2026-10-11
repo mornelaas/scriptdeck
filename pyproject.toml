@@ -3,6 +3,10 @@ name = "scriptdeck"
 version = "0.1.0"
 description = "Backend of a content manager for creators - learning sandbox"
 requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.143.0",
+    "uvicorn>=0.54.0",
+]
 
 [project.scripts]
 scriptdeck = "scriptdeck.cli:app"
