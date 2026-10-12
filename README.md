@@ -25,17 +25,13 @@ idea → borrador → listo → grabado → publicado
 git clone https://github.com/mornelaas/scriptdeck.git
 cd scriptdeck
 
-# 2. Create the virtual environment
-uv venv
+# 2. Create the virtual environment and install dependencies
+uv sync
 
 # 3. Activate it
 source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 
-# 4. Install the package and its dependencies
-uv pip install -e .
-uv pip install -r requirements.txt
-
-# 5. Create the database
+# 4. Create the database
 python -m scriptdeck.database
 ​```
 
@@ -81,8 +77,8 @@ scriptdeck/
 │       ├── update_delete.py    # Update and delete operations
 │       ├── query.py            # Joins, aggregations, subqueries
 │       └── seed.py             # Fake data for development
-├── pyproject.toml              # Project metadata and tooling config
-├── requirements.txt            # Dependencies
+├── pyproject.toml              # Project metadata, dependencies and tooling config
+├── uv.lock                     # Exact versions of every dependency
 └── README.md
 ​```
 
