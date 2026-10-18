@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
+from .read_creators import list_creators
 from .read_scripts import get_script, list_scripts
 
 app = FastAPI()
@@ -32,3 +33,13 @@ def read_script(script_id: int) -> dict[str, Any]:
     if script is None:
         raise HTTPException(status_code=404, detail="Script not found")
     return dict(script)
+
+
+@app.get("/creators")
+def read_creators() -> list[dict[str, Any]]:
+    """Return all creators"""
+    rows = list_creators()
+    creators = []
+    for row in rows:
+        creators.append(dict(row))
+    return creators
