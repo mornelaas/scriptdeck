@@ -5,6 +5,7 @@ def get_connection() -> sqlite3.Connection:
     """Open a connection to the database with foreign keys enforced."""
     con = sqlite3.connect("scriptdeck.db")
     con.execute("PRAGMA foreign_keys = ON")
+    con.row_factory = sqlite3.Row
     return con
 
 
