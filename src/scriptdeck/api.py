@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
-from .read_scripts import get_script
+from .read_scripts import get_script, list_scripts
 
 app = FastAPI()
 
@@ -11,6 +11,18 @@ app = FastAPI()
 def read_root() -> dict[str, str]:
     """Check that the ScriptDeck API is running."""
     return {"message": "Hello Scriptdeck"}
+
+
+@app.get("/scripts")
+def read_scripts(
+    status: str | None = None, creator_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Return all scripts, optionally filtered by status and creator."""
+    rows = list_scripts(status, creator_id)
+    scripts = []
+    for row in rows:
+        scripts.append(dict(row))
+    return scripts
 
 
 @app.get("/scripts/{script_id}")
