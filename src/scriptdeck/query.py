@@ -1,16 +1,11 @@
+import sqlite3
+
 from scriptdeck.models import ScriptStatus
 
 from .database import get_connection
 
 
-def list_creators() -> list[tuple]:
-    with get_connection() as con:
-        cursor = con.cursor()
-        cursor.execute("SELECT name, niche FROM creators")
-        return cursor.fetchall()
-
-
-def scripts_with_creators() -> list[tuple]:
+def scripts_with_creators() -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
@@ -21,21 +16,21 @@ def scripts_with_creators() -> list[tuple]:
         return cursor.fetchall()
 
 
-def scripts_per_creator() -> list[tuple]:
+def scripts_per_creator() -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute("SELECT creator_id, COUNT(*) FROM scripts GROUP BY creator_id")
         return cursor.fetchall()
 
 
-def scripts_per_status() -> list[tuple]:
+def scripts_per_status() -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute("SELECT status, COUNT(*) FROM scripts GROUP BY status")
         return cursor.fetchall()
 
 
-def all_scripts_with_creators() -> list[tuple]:
+def all_scripts_with_creators() -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
@@ -46,7 +41,7 @@ def all_scripts_with_creators() -> list[tuple]:
         return cursor.fetchall()
 
 
-def all_creators_with_scripts() -> list[tuple]:
+def all_creators_with_scripts() -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
@@ -57,7 +52,7 @@ def all_creators_with_scripts() -> list[tuple]:
         return cursor.fetchall()
 
 
-def scripts_per_creator_by_status(status_script: str) -> list[tuple]:
+def scripts_per_creator_by_status(status_script: str) -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
@@ -70,7 +65,7 @@ def scripts_per_creator_by_status(status_script: str) -> list[tuple]:
         return cursor.fetchall()
 
 
-def scripts_by_creator_niche(niche: str) -> list[tuple]:
+def scripts_by_creator_niche(niche: str) -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
@@ -81,7 +76,7 @@ def scripts_by_creator_niche(niche: str) -> list[tuple]:
         return cursor.fetchall()
 
 
-def creators_with_script_count() -> list[tuple]:
+def creators_with_script_count() -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
         cursor.execute(
@@ -93,7 +88,6 @@ def creators_with_script_count() -> list[tuple]:
 
 
 if __name__ == "__main__":
-    print("Creators and niches", list_creators())
     print("Creators with their scripts", scripts_with_creators())
     print("Number of scripts per creator", scripts_per_creator())
     print("Number of scripts per status", scripts_per_status())
