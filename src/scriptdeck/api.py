@@ -16,10 +16,12 @@ def read_root() -> dict[str, str]:
 
 @app.get("/scripts")
 def read_scripts(
-    status: str | None = None, creator_id: int | None = None
+    status: str | None = None,
+    creator_id: int | None = None,
+    platform: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Return all scripts, optionally filtered by status and creator."""
-    rows = list_scripts(status, creator_id)
+    """Return all scripts, optionally filtered by status, creator and platform."""
+    rows = list_scripts(status=status, creator_id=creator_id, platform=platform)
     scripts = []
     for row in rows:
         scripts.append(dict(row))

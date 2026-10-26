@@ -4,7 +4,9 @@ from .database import get_connection
 
 
 def list_scripts(
-    status: str | None = None, creator_id: int | None = None
+    status: str | None = None,
+    creator_id: int | None = None,
+    platform: str | None = None,
 ) -> list[sqlite3.Row]:
     with get_connection() as con:
         cursor = con.cursor()
@@ -20,6 +22,10 @@ def list_scripts(
         if creator_id is not None:
             conditions.append("creator_id = ?")
             params.append(creator_id)
+
+        if platform is not None:
+            conditions.append("platform = ?")
+            params.append(platform)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
