@@ -18,7 +18,3 @@ def create_script(
         )
 
         return cursor.lastrowid
-
-
-if __name__ == "__main__":
-    create_script("La maravilla de vivir")
