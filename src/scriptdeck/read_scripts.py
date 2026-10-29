@@ -42,7 +42,3 @@ def get_script(script_id: int) -> sqlite3.Row | None:
         cursor.execute("SELECT * FROM scripts WHERE id=?", (script_id,))
 
         return cursor.fetchone()
-
-
-if __name__ == "__main__":
-    list_scripts()

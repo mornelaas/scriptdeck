@@ -1,5 +1,4 @@
 from .database import get_connection
-from .models import ScriptStatus
 
 
 def update_status_script(status: str, script_id: int) -> bool:
@@ -19,8 +18,3 @@ def delete_script(script_id: int) -> bool:
         cursor.execute("DELETE FROM scripts WHERE id = ?", (script_id,))
 
         return cursor.rowcount > 0
-
-
-if __name__ == "__main__":
-    update_status_script(ScriptStatus.BORRADOR.value, 1)
-    delete_script(1)
