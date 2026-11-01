@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 from .read_creators import get_creator, list_creators
 from .read_scripts import get_script, list_scripts
+from .schemas import CreatorOut, ScriptOut
 
 app = FastAPI()
 
@@ -14,7 +15,7 @@ def read_root() -> dict[str, str]:
     return {"message": "Hello Scriptdeck"}
 
 
-@app.get("/scripts")
+@app.get("/scripts", response_model=list[ScriptOut])
 def read_scripts(
     status: str | None = None,
     creator_id: int | None = None,
@@ -28,7 +29,7 @@ def read_scripts(
     return scripts
 
 
-@app.get("/scripts/{script_id}")
+@app.get("/scripts/{script_id}", response_model=ScriptOut)
 def read_script(script_id: int) -> dict[str, Any]:
     """Return a single script by its id."""
     script = get_script(script_id)
@@ -37,7 +38,7 @@ def read_script(script_id: int) -> dict[str, Any]:
     return dict(script)
 
 
-@app.get("/creators")
+@app.get("/creators", response_model=list[CreatorOut])
 def read_creators() -> list[dict[str, Any]]:
     """Return all creators"""
     rows = list_creators()
@@ -47,7 +48,7 @@ def read_creators() -> list[dict[str, Any]]:
     return creators
 
 
-@app.get("/creators/{creator_id}/scripts")
+@app.get("/creators/{creator_id}/scripts", response_model=list[ScriptOut])
 def read_creator_scripts(creator_id: int) -> list[dict[str, Any]]:
     """Return all scripts of a creator."""
     creator = get_creator(creator_id)
