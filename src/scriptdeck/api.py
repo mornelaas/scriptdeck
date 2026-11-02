@@ -70,6 +70,7 @@ def create_a_script(script: ScriptCreate) -> dict[str, Any]:
         title=script.title,
         platform=script.platform,
         hook=script.hook,
+        notes=script.notes,
         creator_id=script.creator_id,
     )
     created = get_script(new_id)
