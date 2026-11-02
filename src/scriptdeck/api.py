@@ -2,10 +2,11 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
+from .create_creators import create_creator
 from .create_scripts import create_script
 from .read_creators import get_creator, list_creators
 from .read_scripts import get_script, list_scripts
-from .schemas import CreatorOut, ScriptCreate, ScriptOut
+from .schemas import CreatorCreate, CreatorOut, ScriptCreate, ScriptOut
 
 app = FastAPI()
 
@@ -76,5 +77,19 @@ def create_a_script(script: ScriptCreate) -> dict[str, Any]:
         creator_id=script.creator_id,
     )
     created = get_script(new_id)
+
+    return dict(created)
+
+
+@app.post("/creators", response_model=CreatorOut, status_code=201)
+def create_a_creator(creator: CreatorCreate) -> dict[str, Any]:
+    """Create a new creator."""
+
+    new_id = create_creator(
+        name=creator.name,
+        niche=creator.niche,
+        handle=creator.handle,
+    )
+    created = get_creator(new_id)
 
     return dict(created)
