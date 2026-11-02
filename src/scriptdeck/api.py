@@ -2,9 +2,10 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
+from .create_scripts import create_script
 from .read_creators import get_creator, list_creators
 from .read_scripts import get_script, list_scripts
-from .schemas import CreatorOut, ScriptOut
+from .schemas import CreatorOut, ScriptCreate, ScriptOut
 
 app = FastAPI()
 
@@ -60,3 +61,16 @@ def read_creator_scripts(creator_id: int) -> list[dict[str, Any]]:
     for row in rows:
         creator_scripts.append(dict(row))
     return creator_scripts
+
+
+@app.post("/scripts", response_model=ScriptOut, status_code=201)
+def create_a_script(script: ScriptCreate) -> dict[str, Any]:
+    """Create a new script. It always starts in the 'idea' status."""
+    new_id = create_script(
+        title=script.title,
+        platform=script.platform,
+        hook=script.hook,
+        creator_id=script.creator_id,
+    )
+    created = get_script(new_id)
+    return dict(created)
