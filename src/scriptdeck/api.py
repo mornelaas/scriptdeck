@@ -66,6 +66,8 @@ def read_creator_scripts(creator_id: int) -> list[dict[str, Any]]:
 @app.post("/scripts", response_model=ScriptOut, status_code=201)
 def create_a_script(script: ScriptCreate) -> dict[str, Any]:
     """Create a new script. It always starts in the 'idea' status."""
+    if script.creator_id is not None and get_creator(script.creator_id) is None:
+        raise HTTPException(status_code=422, detail="Creator not found")
     new_id = create_script(
         title=script.title,
         platform=script.platform,
@@ -74,4 +76,5 @@ def create_a_script(script: ScriptCreate) -> dict[str, Any]:
         creator_id=script.creator_id,
     )
     created = get_script(new_id)
+
     return dict(created)
