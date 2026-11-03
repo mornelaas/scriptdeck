@@ -7,7 +7,7 @@ from .create_scripts import create_script
 from .read_creators import get_creator, list_creators
 from .read_scripts import get_script, list_scripts
 from .schemas import CreatorCreate, CreatorOut, ScriptCreate, ScriptOut, ScriptUpdate
-from .update_delete import update_script
+from .update_delete import delete_script, update_script
 
 app = FastAPI()
 
@@ -139,3 +139,12 @@ def replace_a_script(script_id: int, script: ScriptCreate) -> dict[str, Any]:
     )
     updated = get_script(script_id)
     return dict(updated)
+
+
+@app.delete("/scripts/{script_id}", status_code=204)
+def delete_a_script(script_id: int) -> None:
+    """Delete a full script."""
+    deleted = delete_script(script_id=script_id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Script not found")
