@@ -6,7 +6,8 @@ from .create_creators import create_creator
 from .create_scripts import create_script
 from .read_creators import get_creator, list_creators
 from .read_scripts import get_script, list_scripts
-from .schemas import CreatorCreate, CreatorOut, ScriptCreate, ScriptOut
+from .schemas import CreatorCreate, CreatorOut, ScriptCreate, ScriptOut, ScriptUpdate
+from .update_delete import update_script
 
 app = FastAPI()
 
@@ -93,3 +94,26 @@ def create_a_creator(creator: CreatorCreate) -> dict[str, Any]:
     created = get_creator(new_id)
 
     return dict(created)
+
+
+@app.patch("/scripts/{script_id}", response_model=ScriptOut)
+def update_a_script(script_id: int, changes: ScriptUpdate) -> dict[str, Any]:
+    """Update only the fields the client sends."""
+    current = get_script(script_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail="Script not found")
+    if changes.creator_id is not None and get_creator(changes.creator_id) is None:
+        raise HTTPException(status_code=422, detail="Creator not found")
+
+    data = dict(current) | changes.model_dump(mode="json", exclude_unset=True)
+    update_script(
+        script_id=script_id,
+        title=data["title"],
+        status=data["status"],
+        platform=data["platform"],
+        hook=data["hook"],
+        notes=data["notes"],
+        creator_id=data["creator_id"],
+    )
+    updated = get_script(script_id)
+    return dict(updated)
