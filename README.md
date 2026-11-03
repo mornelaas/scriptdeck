@@ -7,6 +7,7 @@ A backend for content creators to manage their scripts through a production life
 - **Python 3.12+**
 - **SQLite** — embedded relational database
 - **FastAPI** — REST API framework built on type hints
+- **Pydantic** — request and response validation with type hints
 - **Uvicorn** — ASGI server that runs the API
 - **Typer** — CLI framework built on type hints
 - **Ruff** — linter + formatter
@@ -83,15 +84,28 @@ The API runs at http://127.0.0.1:8000. Interactive docs:
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | Health check |
-| GET | `/scripts` | List scripts, optionally filtered by `status` and `creator_id` |
+| GET | `/scripts` | List scripts, optionally filtered by `status`, `creator_id` and `platform` |
 | GET | `/scripts/{script_id}` | Get a single script (404 if it doesn't exist) |
+| POST | `/scripts` | Create a script → 201 (422 if the body is invalid or the creator doesn't exist) |
+| PUT | `/scripts/{script_id}` | Replace a script's content → 200 (404 / 422) |
+| PATCH | `/scripts/{script_id}` | Update only the fields sent → 200 (404 / 422) |
+| DELETE | `/scripts/{script_id}` | Delete a script → 204 (404 if it doesn't exist) |
 | GET | `/creators` | List all creators |
+| POST | `/creators` | Create a creator → 201 (422 if the body is invalid) |
 | GET | `/creators/{creator_id}/scripts` | List a creator's scripts (404 if the creator doesn't exist) |
+
+Business rules:
+
+- Every new script starts in `idea`: the create body has no `status`.
+- `PUT` replaces a script's content but keeps its `status`.
+- Status changes go through `PATCH`.
 
 Example:
 
 ```bash
-curl "http://127.0.0.1:8000/scripts?status=listo&creator_id=5"
+curl -X POST http://127.0.0.1:8000/scripts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "How I started my startup", "platform": "youtube"}'
 ```
 
 ## Project structure
@@ -104,7 +118,9 @@ scriptdeck/
 │       ├── cli.py              # CLI commands (Typer)
 │       ├── database.py         # Schema and connection factory
 │       ├── models.py           # ScriptStatus enum
-│       ├── create_scripts.py   # Insert operations
+│       ├── schemas.py          # Pydantic schemas (Create / Update / Out)
+│       ├── create_scripts.py   # Insert scripts
+│       ├── create_creators.py  # Insert creators
 │       ├── read_scripts.py     # Read scripts with filters
 │       ├── read_creators.py    # Read creators
 │       ├── update_delete.py    # Update and delete operations
@@ -131,6 +147,6 @@ python -m scriptdeck.seed
 
 ## Project status
 
-Working CLI and a read-only REST API over a normalized SQLite database: full CRUD from the CLI, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. Type hints across every function and zero Ruff warnings.
+Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 422). Type hints across every function and zero Ruff warnings.
 
-Built as a learning project while working through a backend engineering roadmap. Next steps: create, update and delete endpoints with Pydantic validation, migration to PostgreSQL, JWT authentication and a test suite with pytest.
+Built as a learning project while working through a backend engineering roadmap. Next steps: enforce the script state machine on status changes, migration to PostgreSQL, JWT authentication and a test suite with pytest.
