@@ -117,3 +117,25 @@ def update_a_script(script_id: int, changes: ScriptUpdate) -> dict[str, Any]:
     )
     updated = get_script(script_id)
     return dict(updated)
+
+
+@app.put("/scripts/{script_id}", response_model=ScriptOut)
+def replace_a_script(script_id: int, script: ScriptCreate) -> dict[str, Any]:
+    """Replace the whole content of a script. The status is kept as it is."""
+    current = get_script(script_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail="Script not found")
+    if script.creator_id is not None and get_creator(script.creator_id) is None:
+        raise HTTPException(status_code=422, detail="Creator not found")
+
+    update_script(
+        script_id=script_id,
+        title=script.title,
+        status=current["status"],
+        platform=script.platform,
+        hook=script.hook,
+        notes=script.notes,
+        creator_id=script.creator_id,
+    )
+    updated = get_script(script_id)
+    return dict(updated)
