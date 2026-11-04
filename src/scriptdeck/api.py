@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 from .create_creators import create_creator
 from .create_scripts import create_script
+from .models import ScriptStatus, can_transition
 from .read_creators import get_creator, list_creators
 from .read_scripts import get_script, list_scripts
 from .schemas import CreatorCreate, CreatorOut, ScriptCreate, ScriptOut, ScriptUpdate
@@ -104,6 +105,17 @@ def update_a_script(script_id: int, changes: ScriptUpdate) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Script not found")
     if changes.creator_id is not None and get_creator(changes.creator_id) is None:
         raise HTTPException(status_code=422, detail="Creator not found")
+
+    if changes.status is not None:
+        current_status = ScriptStatus(current["status"])
+        if not can_transition(current_status, changes.status):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Cannot move from '{current_status.value}' "
+                    f"to '{changes.status.value}'"
+                ),
+            )
 
     data = dict(current) | changes.model_dump(mode="json", exclude_unset=True)
     update_script(
