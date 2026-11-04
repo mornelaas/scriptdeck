@@ -21,6 +21,8 @@ A script moves through five states:
 idea → borrador → listo → grabado → publicado
 ```
 
+A script moves one step at a time, forward or back. `publicado` is final: once published, its status can't change.
+
 ## Installation
 
 ```bash
@@ -88,7 +90,7 @@ The API runs at http://127.0.0.1:8000. Interactive docs:
 | GET | `/scripts/{script_id}` | Get a single script (404 if it doesn't exist) |
 | POST | `/scripts` | Create a script → 201 (422 if the body is invalid or the creator doesn't exist) |
 | PUT | `/scripts/{script_id}` | Replace a script's content → 200 (404 / 422) |
-| PATCH | `/scripts/{script_id}` | Update only the fields sent → 200 (404 / 422) |
+| PATCH | `/scripts/{script_id}` | Update only the fields sent → 200 (404 / 409 / 422) |
 | DELETE | `/scripts/{script_id}` | Delete a script → 204 (404 if it doesn't exist) |
 | GET | `/creators` | List all creators |
 | POST | `/creators` | Create a creator → 201 (422 if the body is invalid) |
@@ -98,7 +100,7 @@ Business rules:
 
 - Every new script starts in `idea`: the create body has no `status`.
 - `PUT` replaces a script's content but keeps its `status`.
-- Status changes go through `PATCH`.
+- Status changes go through `PATCH`, one step at a time; any other move returns 409.
 
 Example:
 
@@ -147,6 +149,6 @@ python -m scriptdeck.seed
 
 ## Project status
 
-Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 422). Type hints across every function and zero Ruff warnings.
+Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings.
 
-Built as a learning project while working through a backend engineering roadmap. Next steps: enforce the script state machine on status changes, migration to PostgreSQL, JWT authentication and a test suite with pytest.
+Built as a learning project while working through a backend engineering roadmap. Next steps: migration to PostgreSQL, JWT authentication and a test suite with pytest.
