@@ -116,7 +116,11 @@ curl -X POST http://127.0.0.1:8000/scripts \
 scriptdeck/
 ├── src/
 │   └── scriptdeck/
-│       ├── api.py              # REST API endpoints (FastAPI)
+│       ├── api.py              # FastAPI app entry point (includes the routers)
+│       ├── routers/            # API endpoints, one router per resource
+│       │   ├── __init__.py     # Makes routers/ a Python package
+│       │   ├── creators.py     # /creators endpoints
+│       │   └── scripts.py      # /scripts endpoints
 │       ├── cli.py              # CLI commands (Typer)
 │       ├── database.py         # Schema and connection factory
 │       ├── models.py           # ScriptStatus enum
