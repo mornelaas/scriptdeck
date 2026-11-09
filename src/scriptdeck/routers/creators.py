@@ -1,37 +1,32 @@
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import select
 
 from ..create_creators import create_creator
-from ..read_creators import get_creator, list_creators
-from ..read_scripts import list_scripts
+from ..dependencies import SessionDep
+from ..orm.models import Creator, Script
+from ..read_creators import get_creator
 from ..schemas import CreatorCreate, CreatorOut, ScriptOut
 
 router = APIRouter(prefix="/creators", tags=["creators"])
 
 
 @router.get("", response_model=list[CreatorOut])
-def read_creators() -> list[dict[str, Any]]:
+def read_creators(db: SessionDep) -> Sequence[Creator]:
     """Return all creators"""
-    rows = list_creators()
-    creators = []
-    for row in rows:
-        creators.append(dict(row))
-    return creators
+    stmt = select(Creator).order_by(Creator.id)
+    return db.scalars(stmt).all()
 
 
 @router.get("/{creator_id}/scripts", response_model=list[ScriptOut])
-def read_creator_scripts(creator_id: int) -> list[dict[str, Any]]:
+def read_creator_scripts(creator_id: int, db: SessionDep) -> list[Script]:
     """Return all scripts of a creator."""
-    creator = get_creator(creator_id)
+    creator = db.get(Creator, creator_id)
     if creator is None:
         raise HTTPException(status_code=404, detail="Creator not found")
-
-    rows = list_scripts(creator_id=creator_id)  # keyword argument
-    creator_scripts = []
-    for row in rows:
-        creator_scripts.append(dict(row))
-    return creator_scripts
+    return creator.scripts
 
 
 @router.post("", response_model=CreatorOut, status_code=201)

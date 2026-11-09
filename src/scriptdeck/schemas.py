@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from scriptdeck.models import ScriptStatus
 
@@ -27,6 +27,7 @@ class ScriptUpdate(BaseModel):
 
 
 class ScriptOut(ScriptBase):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     status: ScriptStatus
     created_at: datetime
@@ -50,5 +51,6 @@ class CreatorUpdate(BaseModel):
 
 
 class CreatorOut(CreatorBase):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     created_at: datetime
