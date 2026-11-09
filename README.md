@@ -9,6 +9,7 @@ A backend for content creators to manage their scripts through a production life
 - **SQLAlchemy** — ORM that maps the tables to Python classes
 - **FastAPI** — REST API framework built on type hints
 - **Pydantic** — request and response validation with type hints
+- **pydantic-settings** — configuration from environment variables and `.env`
 - **Uvicorn** — ASGI server that runs the API
 - **Typer** — CLI framework built on type hints
 - **Ruff** — linter + formatter
@@ -39,6 +40,9 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 
 # 4. Create the database
 python -m scriptdeck.database
+
+# 5. Create your local configuration from the template
+cp .env.example .env
 ```
 
 ## Usage
@@ -118,6 +122,7 @@ scriptdeck/
 ├── src/
 │   └── scriptdeck/
 │       ├── api.py              # FastAPI app entry point (includes the routers)
+│       ├── config.py           # Settings read from environment variables and .env
 │       ├── routers/            # API endpoints, one router per resource
 │       │   ├── __init__.py     # Makes routers/ a Python package
 │       │   ├── creators.py     # /creators endpoints
@@ -138,6 +143,7 @@ scriptdeck/
 │       ├── update_delete.py    # Update and delete operations
 │       ├── query.py            # Joins, aggregations, subqueries
 │       └── seed.py             # Fake data for development
+├── .env.example                # Template for your local .env (copy it and fill it in)
 ├── pyproject.toml              # Project metadata, dependencies and tooling config
 ├── uv.lock                     # Exact versions of every dependency
 └── README.md
@@ -159,6 +165,6 @@ python -m scriptdeck.seed
 
 ## Project status
 
-Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource), and its read endpoints query the database through the SQLAlchemy ORM; writes and the CLI still use `sqlite3`.
+Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource), and its read endpoints query the database through the SQLAlchemy ORM; writes and the CLI still use `sqlite3`. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
 
 Built as a learning project while working through a backend engineering roadmap. Next steps: migration to PostgreSQL, JWT authentication and a test suite with pytest.

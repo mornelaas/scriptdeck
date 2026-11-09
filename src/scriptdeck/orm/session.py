@@ -3,10 +3,10 @@ from collections.abc import Iterator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-DATABASE_URL = "sqlite:///scriptdeck.db"
+from ..config import settings
 
 engine = create_engine(
-    DATABASE_URL,
+    settings.database_url,
     connect_args={"check_same_thread": False},
 )
 
