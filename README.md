@@ -6,6 +6,7 @@ A backend for content creators to manage their scripts through a production life
 
 - **Python 3.12+**
 - **SQLite** — embedded relational database
+- **SQLAlchemy** — ORM that maps the tables to Python classes
 - **FastAPI** — REST API framework built on type hints
 - **Pydantic** — request and response validation with type hints
 - **Uvicorn** — ASGI server that runs the API
@@ -121,8 +122,13 @@ scriptdeck/
 │       │   ├── __init__.py     # Makes routers/ a Python package
 │       │   ├── creators.py     # /creators endpoints
 │       │   └── scripts.py      # /scripts endpoints
+│       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep)
+│       ├── orm/                # SQLAlchemy ORM: engine, sessions and models
+│       │   ├── __init__.py     # Makes orm/ a Python package
+│       │   ├── models.py       # Script and Creator mapped to the existing tables
+│       │   └── session.py      # Engine, session factory and get_db
 │       ├── cli.py              # CLI commands (Typer)
-│       ├── database.py         # Schema and connection factory
+│       ├── database.py         # sqlite3 schema and connection (CLI and write endpoints)
 │       ├── models.py           # ScriptStatus enum
 │       ├── schemas.py          # Pydantic schemas (Create / Update / Out)
 │       ├── create_scripts.py   # Insert scripts
@@ -153,6 +159,6 @@ python -m scriptdeck.seed
 
 ## Project status
 
-Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings.
+Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource), and its read endpoints query the database through the SQLAlchemy ORM; writes and the CLI still use `sqlite3`.
 
 Built as a learning project while working through a backend engineering roadmap. Next steps: migration to PostgreSQL, JWT authentication and a test suite with pytest.
