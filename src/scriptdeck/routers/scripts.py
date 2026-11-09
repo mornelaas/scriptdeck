@@ -1,11 +1,15 @@
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import select
 
 from ..create_scripts import create_script
+from ..dependencies import SessionDep
 from ..models import ScriptStatus, can_transition
+from ..orm.models import Script
 from ..read_creators import get_creator
-from ..read_scripts import get_script, list_scripts
+from ..read_scripts import get_script
 from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
 from ..update_delete import delete_script, update_script
 
@@ -14,25 +18,29 @@ router = APIRouter(prefix="/scripts", tags=["scripts"])
 
 @router.get("", response_model=list[ScriptOut])
 def read_scripts(
+    db: SessionDep,
     status: str | None = None,
     creator_id: int | None = None,
     platform: str | None = None,
-) -> list[dict[str, Any]]:
+) -> Sequence[Script]:
     """Return all scripts, optionally filtered by status, creator and platform."""
-    rows = list_scripts(status=status, creator_id=creator_id, platform=platform)
-    scripts = []
-    for row in rows:
-        scripts.append(dict(row))
-    return scripts
+    stmt = select(Script).order_by(Script.id)
+    if status is not None:
+        stmt = stmt.where(Script.status == status)
+    if creator_id is not None:
+        stmt = stmt.where(Script.creator_id == creator_id)
+    if platform is not None:
+        stmt = stmt.where(Script.platform == platform)
+    return db.scalars(stmt).all()
 
 
 @router.get("/{script_id}", response_model=ScriptOut)
-def read_script(script_id: int) -> dict[str, Any]:
+def read_script(script_id: int, db: SessionDep) -> Script:
     """Return a single script by its id."""
-    script = get_script(script_id)
+    script = db.get(Script, script_id)
     if script is None:
         raise HTTPException(status_code=404, detail="Script not found")
-    return dict(script)
+    return script
 
 
 @router.post("", response_model=ScriptOut, status_code=201)
