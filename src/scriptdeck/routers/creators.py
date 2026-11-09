@@ -14,9 +14,11 @@ router = APIRouter(prefix="/creators", tags=["creators"])
 
 
 @router.get("", response_model=list[CreatorOut])
-def read_creators(db: SessionDep) -> Sequence[Creator]:
-    """Return all creators"""
+def read_creators(db: SessionDep, niche: str | None = None) -> Sequence[Creator]:
+    """Return all creators, optionally filtered by niche."""
     stmt = select(Creator).order_by(Creator.id)
+    if niche is not None:
+        stmt = stmt.where(Creator.niche == niche)
     return db.scalars(stmt).all()
 
 
