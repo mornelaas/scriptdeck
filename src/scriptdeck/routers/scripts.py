@@ -4,10 +4,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from ..create_scripts import create_script
 from ..dependencies import SessionDep
 from ..models import ScriptStatus, can_transition
-from ..orm.models import Script
+from ..orm.models import Creator, Script
 from ..read_creators import get_creator
 from ..read_scripts import get_script
 from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
@@ -44,20 +43,15 @@ def read_script(script_id: int, db: SessionDep) -> Script:
 
 
 @router.post("", response_model=ScriptOut, status_code=201)
-def create_a_script(script: ScriptCreate) -> dict[str, Any]:
+def create_a_script(script: ScriptCreate, db: SessionDep) -> Script:
     """Create a new script. It always starts in the 'idea' status."""
-    if script.creator_id is not None and get_creator(script.creator_id) is None:
+    if script.creator_id is not None and db.get(Creator, script.creator_id) is None:
         raise HTTPException(status_code=422, detail="Creator not found")
-    new_id = create_script(
-        title=script.title,
-        platform=script.platform,
-        hook=script.hook,
-        notes=script.notes,
-        creator_id=script.creator_id,
-    )
-    created = get_script(new_id)
-
-    return dict(created)
+    new_script = Script(**script.model_dump())
+    db.add(new_script)
+    db.commit()
+    db.refresh(new_script)
+    return new_script
 
 
 @router.put("/{script_id}", response_model=ScriptOut)
