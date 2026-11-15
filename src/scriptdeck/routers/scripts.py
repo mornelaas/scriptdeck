@@ -4,13 +4,13 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from ..dependencies import SessionDep
+from ..dependencies import ScriptDep, SessionDep
 from ..models import ScriptStatus, can_transition
 from ..orm.models import Creator, Script
 from ..read_creators import get_creator
 from ..read_scripts import get_script
 from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
-from ..update_delete import delete_script, update_script
+from ..update_delete import update_script
 
 router = APIRouter(prefix="/scripts", tags=["scripts"])
 
@@ -111,9 +111,7 @@ def update_a_script(script_id: int, changes: ScriptUpdate) -> dict[str, Any]:
 
 
 @router.delete("/{script_id}", status_code=204)
-def delete_a_script(script_id: int) -> None:
+def delete_a_script(script: ScriptDep, db: SessionDep) -> None:
     """Delete a full script."""
-    deleted = delete_script(script_id=script_id)
-
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Script not found")
+    db.delete(script)
+    db.commit()
