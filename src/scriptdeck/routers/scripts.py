@@ -55,25 +55,15 @@ def create_a_script(script: ScriptCreate, db: SessionDep) -> Script:
 
 
 @router.put("/{script_id}", response_model=ScriptOut)
-def replace_a_script(script_id: int, script: ScriptCreate) -> dict[str, Any]:
+def replace_a_script(script: ScriptDep, data: ScriptCreate, db: SessionDep) -> Script:
     """Replace the whole content of a script. The status is kept as it is."""
-    current = get_script(script_id)
-    if current is None:
-        raise HTTPException(status_code=404, detail="Script not found")
-    if script.creator_id is not None and get_creator(script.creator_id) is None:
+    if data.creator_id is not None and db.get(Creator, data.creator_id) is None:
         raise HTTPException(status_code=422, detail="Creator not found")
-
-    update_script(
-        script_id=script_id,
-        title=script.title,
-        status=current["status"],
-        platform=script.platform,
-        hook=script.hook,
-        notes=script.notes,
-        creator_id=script.creator_id,
-    )
-    updated = get_script(script_id)
-    return dict(updated)
+    for field, value in data.model_dump().items():
+        setattr(script, field, value)
+    db.commit()
+    db.refresh(script)
+    return script
 
 
 @router.patch("/{script_id}", response_model=ScriptOut)
