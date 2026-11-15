@@ -1,13 +1,10 @@
 from collections.abc import Sequence
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from ..create_creators import create_creator
 from ..dependencies import SessionDep
 from ..orm.models import Creator, Script
-from ..read_creators import get_creator
 from ..schemas import CreatorCreate, CreatorOut, ScriptOut
 
 router = APIRouter(prefix="/creators", tags=["creators"])
@@ -32,14 +29,10 @@ def read_creator_scripts(creator_id: int, db: SessionDep) -> list[Script]:
 
 
 @router.post("", response_model=CreatorOut, status_code=201)
-def create_a_creator(creator: CreatorCreate) -> dict[str, Any]:
+def create_a_creator(creator: CreatorCreate, db: SessionDep) -> Creator:
     """Create a new creator."""
-
-    new_id = create_creator(
-        name=creator.name,
-        niche=creator.niche,
-        handle=creator.handle,
-    )
-    created = get_creator(new_id)
-
-    return dict(created)
+    new_creator = Creator(**creator.model_dump())
+    db.add(new_creator)
+    db.commit()
+    db.refresh(new_creator)
+    return new_creator
