@@ -41,7 +41,10 @@ class Script(Base):
     hook: Mapped[str | None]
     notes: Mapped[str | None]
     created_at: Mapped[str] = mapped_column(server_default=func.current_timestamp())
-    updated_at: Mapped[str] = mapped_column(server_default=func.current_timestamp())
+    updated_at: Mapped[str] = mapped_column(
+        server_default=func.current_timestamp(),
+        onupdate=func.current_timestamp(),
+    )
     creator_id: Mapped[int | None] = mapped_column(ForeignKey("creators.id"))
 
     creator: Mapped["Creator | None"] = relationship(back_populates="scripts")
