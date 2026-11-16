@@ -127,13 +127,13 @@ scriptdeck/
 │       │   ├── __init__.py     # Makes routers/ a Python package
 │       │   ├── creators.py     # /creators endpoints
 │       │   └── scripts.py      # /scripts endpoints
-│       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep)
+│       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep, ScriptDep)
 │       ├── orm/                # SQLAlchemy ORM: engine, sessions and models
 │       │   ├── __init__.py     # Makes orm/ a Python package
 │       │   ├── models.py       # Script and Creator mapped to the existing tables
 │       │   └── session.py      # Engine, session factory and get_db
 │       ├── cli.py              # CLI commands (Typer)
-│       ├── database.py         # sqlite3 schema and connection (CLI and write endpoints)
+│       ├── database.py         # Legacy sqlite3 schema and connection (used by the CLI)
 │       ├── models.py           # ScriptStatus enum
 │       ├── schemas.py          # Pydantic schemas (Create / Update / Out)
 │       ├── create_scripts.py   # Insert scripts
@@ -148,6 +148,22 @@ scriptdeck/
 ├── uv.lock                     # Exact versions of every dependency
 └── README.md
 ```
+
+## Architecture
+
+Every API endpoint talks to the database through the SQLAlchemy ORM:
+
+```
+request → router → dependencies (SessionDep, ScriptDep) → ORM session → SQLite
+```
+
+- `SessionDep` opens one session per request (`get_db`) and always closes it.
+- `ScriptDep` loads the script from the path or stops the request with a 404 (`get_script_or_404`).
+- Writes follow the session cycle: `add` → `commit` → `refresh`.
+- SQLite foreign keys are enforced on every ORM connection (`PRAGMA foreign_keys=ON`).
+- `created_at`, `updated_at` and `status` are filled by the database; `updated_at` changes on every update.
+
+> The Typer CLI still uses the legacy `sqlite3` data layer. It will move to the ORM before the PostgreSQL migration.
 
 ## Development
 
@@ -165,6 +181,6 @@ python -m scriptdeck.seed
 
 ## Project status
 
-Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource), and its read endpoints query the database through the SQLAlchemy ORM; writes and the CLI still use `sqlite3`. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
+Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource), and every endpoint (reads and writes) talks to the database through the SQLAlchemy ORM; only the CLI still uses `sqlite3`. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
 
-Built as a learning project while working through a backend engineering roadmap. Next steps: migration to PostgreSQL, JWT authentication and a test suite with pytest.
+Built as a learning project while working through a backend engineering roadmap. Next steps: moving the CLI to the ORM, migration to PostgreSQL, JWT authentication and a test suite with pytest.
