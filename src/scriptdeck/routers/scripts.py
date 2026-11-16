@@ -1,16 +1,12 @@
 from collections.abc import Sequence
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from ..dependencies import ScriptDep, SessionDep
-from ..models import ScriptStatus, can_transition
+from ..models import can_transition
 from ..orm.models import Creator, Script
-from ..read_creators import get_creator
-from ..read_scripts import get_script
 from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
-from ..update_delete import update_script
 
 router = APIRouter(prefix="/scripts", tags=["scripts"])
 
@@ -67,16 +63,13 @@ def replace_a_script(script: ScriptDep, data: ScriptCreate, db: SessionDep) -> S
 
 
 @router.patch("/{script_id}", response_model=ScriptOut)
-def update_a_script(script_id: int, changes: ScriptUpdate) -> dict[str, Any]:
+def update_a_script(script: ScriptDep, changes: ScriptUpdate, db: SessionDep) -> Script:
     """Update only the fields the client sends."""
-    current = get_script(script_id)
-    if current is None:
-        raise HTTPException(status_code=404, detail="Script not found")
-    if changes.creator_id is not None and get_creator(changes.creator_id) is None:
+    if changes.creator_id is not None and db.get(Creator, changes.creator_id) is None:
         raise HTTPException(status_code=422, detail="Creator not found")
 
     if changes.status is not None:
-        current_status = ScriptStatus(current["status"])
+        current_status = script.status
         if not can_transition(current_status, changes.status):
             raise HTTPException(
                 status_code=409,
@@ -86,18 +79,11 @@ def update_a_script(script_id: int, changes: ScriptUpdate) -> dict[str, Any]:
                 ),
             )
 
-    data = dict(current) | changes.model_dump(mode="json", exclude_unset=True)
-    update_script(
-        script_id=script_id,
-        title=data["title"],
-        status=data["status"],
-        platform=data["platform"],
-        hook=data["hook"],
-        notes=data["notes"],
-        creator_id=data["creator_id"],
-    )
-    updated = get_script(script_id)
-    return dict(updated)
+    for field, value in changes.model_dump(exclude_unset=True).items():
+        setattr(script, field, value)
+    db.commit()
+    db.refresh(script)
+    return script
 
 
 @router.delete("/{script_id}", status_code=204)
