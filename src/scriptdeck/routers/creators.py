@@ -3,9 +3,11 @@ from collections.abc import Sequence
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from ..dependencies import SessionDep
+from scriptdeck.models import is_valid_handle
+
+from ..dependencies import CreatorDep, SessionDep
 from ..orm.models import Creator, Script
-from ..schemas import CreatorCreate, CreatorOut, ScriptOut
+from ..schemas import CreatorCreate, CreatorOut, CreatorUpdate, ScriptOut
 
 router = APIRouter(prefix="/creators", tags=["creators"])
 
@@ -36,3 +38,24 @@ def create_a_creator(creator: CreatorCreate, db: SessionDep) -> Creator:
     db.commit()
     db.refresh(new_creator)
     return new_creator
+
+
+@router.patch("/{creator_id}", response_model=CreatorOut, status_code=200)
+def update_a_creator(
+    creator: CreatorDep, changes: CreatorUpdate, db: SessionDep
+) -> Creator:
+    """Update only the fields the client sends."""
+
+    if changes.handle is not None:
+        if not is_valid_handle(changes.handle):
+            raise HTTPException(
+                status_code=422,
+                detail="Handle must start with @",
+            )
+
+    for field, value in changes.model_dump(exclude_unset=True).items():
+        setattr(creator, field, value)
+
+    db.commit()
+    db.refresh(creator)
+    return creator
