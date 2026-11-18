@@ -18,3 +18,8 @@ def can_transition(current: ScriptStatus, new: ScriptStatus) -> bool:
     order = list(ScriptStatus)
     step = order.index(new) - order.index(current)
     return step in (1, -1)
+
+
+def is_valid_handle(handle: str) -> bool:
+    """Return True if a creator handle start with @."""
+    return handle.startswith("@")
