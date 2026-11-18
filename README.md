@@ -99,6 +99,7 @@ The API runs at http://127.0.0.1:8000. Interactive docs:
 | DELETE | `/scripts/{script_id}` | Delete a script → 204 (404 if it doesn't exist) |
 | GET | `/creators` | List all creators |
 | POST | `/creators` | Create a creator → 201 (422 if the body is invalid) |
+| PATCH | `/creators/{creator_id}` | Update only the fields sent → 200 (404 / 422 if the handle doesn't start with @) |
 | GET | `/creators/{creator_id}/scripts` | List a creator's scripts (404 if the creator doesn't exist) |
 
 Business rules:
@@ -127,7 +128,7 @@ scriptdeck/
 │       │   ├── __init__.py     # Makes routers/ a Python package
 │       │   ├── creators.py     # /creators endpoints
 │       │   └── scripts.py      # /scripts endpoints
-│       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep, ScriptDep)
+│       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep, ScriptDep, CreatorDep)
 │       ├── orm/                # SQLAlchemy ORM: engine, sessions and models
 │       │   ├── __init__.py     # Makes orm/ a Python package
 │       │   ├── models.py       # Script and Creator mapped to the existing tables
