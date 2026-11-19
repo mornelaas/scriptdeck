@@ -37,3 +37,9 @@ def update_script(db: Session, script: Script, changes: ScriptUpdate) -> Script:
     db.refresh(script)
 
     return script
+
+
+def delete_script(db: Session, script: Script) -> None:
+    """Delete the given script from the database."""
+    db.delete(script)
+    db.commit()

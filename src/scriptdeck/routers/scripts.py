@@ -6,7 +6,12 @@ from sqlalchemy import select
 from ..dependencies import ScriptDep, SessionDep
 from ..orm.models import Creator, Script
 from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
-from ..services import CreatorNotFoundError, InvalidTransitionError, update_script
+from ..services import (
+    CreatorNotFoundError,
+    InvalidTransitionError,
+    delete_script,
+    update_script,
+)
 
 router = APIRouter(prefix="/scripts", tags=["scripts"])
 
@@ -76,5 +81,4 @@ def update_a_script(script: ScriptDep, changes: ScriptUpdate, db: SessionDep) ->
 @router.delete("/{script_id}", status_code=204)
 def delete_a_script(script: ScriptDep, db: SessionDep) -> None:
     """Delete a full script."""
-    db.delete(script)
-    db.commit()
+    delete_script(db, script)
