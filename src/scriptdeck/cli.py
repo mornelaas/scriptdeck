@@ -7,8 +7,7 @@ from .orm.session import SessionLocal
 from .query import scripts_per_creator, scripts_per_status
 from .read_scripts import list_scripts
 from .schemas import ScriptUpdate
-from .services import InvalidTransitionError, update_script
-from .update_delete import delete_script
+from .services import InvalidTransitionError, delete_script, update_script
 
 app = typer.Typer()
 
@@ -58,12 +57,15 @@ def update(script_id: int, status: ScriptStatus) -> None:
 
 @app.command()
 def delete(script_id: int) -> None:
-    """Delete script from table scripts"""
-    was_deleted = delete_script(script_id=script_id)
-    if was_deleted:
-        print(f"The script {script_id} was deleted")
-    else:
-        print("None script was deleted")
+    """Delete a script for good."""
+    with SessionLocal() as db:
+        script = db.get(Script, script_id)
+        if script is None:
+            print(f"Script #{script_id} not found")
+            raise typer.Exit(code=1)
+
+        delete_script(db, script)
+        print(f"Script #{script_id} deleted")
 
 
 @app.command()
