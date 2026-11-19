@@ -1,9 +1,14 @@
 import typer
 
 from .create_scripts import create_script
+from .models import ScriptStatus
+from .orm.models import Script
+from .orm.session import SessionLocal
 from .query import scripts_per_creator, scripts_per_status
 from .read_scripts import list_scripts
-from .update_delete import delete_script, update_status_script
+from .schemas import ScriptUpdate
+from .services import InvalidTransitionError, update_script
+from .update_delete import delete_script
 
 app = typer.Typer()
 
@@ -34,13 +39,21 @@ def add(
 
 
 @app.command()
-def update(script_id: int, status: str) -> None:
-    """Update a script status into table scripts"""
-    was_updated = update_status_script(status=status, script_id=script_id)
-    if was_updated:
-        print(f"The script {script_id} change status to: {status}")
-    else:
-        print("None script was updated")
+def update(script_id: int, status: ScriptStatus) -> None:
+    """Change the status of a script, following the state machine."""
+    with SessionLocal() as db:
+        script = db.get(Script, script_id)
+        if script is None:
+            print(f"Script #{script_id} not found")
+            raise typer.Exit(code=1)
+
+        try:
+            update_script(db, script, ScriptUpdate(status=status))
+        except InvalidTransitionError as error:
+            print(error)
+            raise typer.Exit(code=1) from error
+
+        print(f"Script #{script_id} moved to: {status.value}")
 
 
 @app.command()
