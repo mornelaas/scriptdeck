@@ -15,11 +15,16 @@ class InvalidTransitionError(Exception):
     """Raised when a status change breaks the script state machine."""
 
 
+def _ensure_creator_exists(db: Session, creator_id: int | None) -> None:
+    """Raise CreatorNotFoundError if creator_id points to no creator."""
+    if creator_id is not None and db.get(Creator, creator_id) is None:
+        raise CreatorNotFoundError(f"Creator {creator_id} not found")
+
+
 def update_script(db: Session, script: Script, changes: ScriptUpdate) -> Script:
     """Apply only the fields that were sent, following the business rules."""
 
-    if changes.creator_id is not None and db.get(Creator, changes.creator_id) is None:
-        raise CreatorNotFoundError(f"Creator {changes.creator_id} not found")
+    _ensure_creator_exists(db, changes.creator_id)
 
     if changes.status is not None:
         allowed = can_transition(script.status, changes.status)
