@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select
 
 from ..dependencies import ScriptDep, SessionDep
+from ..models import ScriptStatus
 from ..orm.models import Creator, Script
 from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
 from ..services import (
@@ -11,6 +11,7 @@ from ..services import (
     InvalidTransitionError,
     create_script,
     delete_script,
+    list_scripts,
     update_script,
 )
 
@@ -20,19 +21,12 @@ router = APIRouter(prefix="/scripts", tags=["scripts"])
 @router.get("", response_model=list[ScriptOut])
 def read_scripts(
     db: SessionDep,
-    status: str | None = None,
+    status: ScriptStatus | None = None,
     creator_id: int | None = None,
     platform: str | None = None,
 ) -> Sequence[Script]:
     """Return all scripts, optionally filtered by status, creator and platform."""
-    stmt = select(Script).order_by(Script.id)
-    if status is not None:
-        stmt = stmt.where(Script.status == status)
-    if creator_id is not None:
-        stmt = stmt.where(Script.creator_id == creator_id)
-    if platform is not None:
-        stmt = stmt.where(Script.platform == platform)
-    return db.scalars(stmt).all()
+    return list_scripts(db=db, status=status, creator_id=creator_id, platform=platform)
 
 
 @router.get("/{script_id}", response_model=ScriptOut)

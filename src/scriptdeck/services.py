@@ -1,8 +1,11 @@
 """Business operations on scripts, shared by the API and the CLI."""
 
+from collections.abc import Sequence
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import can_transition
+from .models import ScriptStatus, can_transition
 from .orm.models import Creator, Script
 from .schemas import ScriptCreate, ScriptUpdate
 
@@ -61,3 +64,20 @@ def create_script(db: Session, data: ScriptCreate) -> Script:
     db.refresh(script)
 
     return script
+
+
+def list_scripts(
+    db: Session,
+    status: ScriptStatus | None = None,
+    creator_id: int | None = None,
+    platform: str | None = None,
+) -> Sequence[Script]:
+    """Return all scripts, optionally filtered by status, creator and platform."""
+    stmt = select(Script).order_by(Script.id)
+    if status is not None:
+        stmt = stmt.where(Script.status == status)
+    if creator_id is not None:
+        stmt = stmt.where(Script.creator_id == creator_id)
+    if platform is not None:
+        stmt = stmt.where(Script.platform == platform)
+    return db.scalars(stmt).all()
