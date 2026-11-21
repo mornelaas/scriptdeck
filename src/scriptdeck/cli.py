@@ -5,13 +5,13 @@ from .models import ScriptStatus
 from .orm.models import Script
 from .orm.session import SessionLocal
 from .query import scripts_per_creator, scripts_per_status
-from .read_scripts import list_scripts
 from .schemas import ScriptCreate, ScriptUpdate
 from .services import (
     CreatorNotFoundError,
     InvalidTransitionError,
     create_script,
     delete_script,
+    list_scripts,
     update_script,
 )
 
@@ -19,12 +19,22 @@ app = typer.Typer()
 
 
 @app.command()
-def list_all(creator_id: int | None = None, status: str | None = None) -> None:
-    """List all scripts in the database."""
-    scripts = list_scripts(creator_id=creator_id, status=status)
+def list_all(
+    status: ScriptStatus | None = None,
+    creator_id: int | None = None,
+    platform: str | None = None,
+) -> None:
+    """List scripts, optionally filtered by status, creator and platform."""
+
+    with SessionLocal() as db:
+        scripts = list_scripts(
+            db=db, status=status, creator_id=creator_id, platform=platform
+        )
+
     for script in scripts:
         print(
-            f"#{script[0]} title: {script[1]} status: {script[2]} platform: {script[3]}"
+            f"#{script.id} title: {script.title} "
+            f"status: {script.status.value} platform: {script.platform}"
         )
 
 
