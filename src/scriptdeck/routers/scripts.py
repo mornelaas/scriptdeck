@@ -9,6 +9,7 @@ from ..schemas import ScriptCreate, ScriptOut, ScriptUpdate
 from ..services import (
     CreatorNotFoundError,
     InvalidTransitionError,
+    create_script,
     delete_script,
     update_script,
 )
@@ -46,13 +47,10 @@ def read_script(script_id: int, db: SessionDep) -> Script:
 @router.post("", response_model=ScriptOut, status_code=201)
 def create_a_script(script: ScriptCreate, db: SessionDep) -> Script:
     """Create a new script. It always starts in the 'idea' status."""
-    if script.creator_id is not None and db.get(Creator, script.creator_id) is None:
-        raise HTTPException(status_code=422, detail="Creator not found")
-    new_script = Script(**script.model_dump())
-    db.add(new_script)
-    db.commit()
-    db.refresh(new_script)
-    return new_script
+    try:
+        return create_script(db, script)
+    except CreatorNotFoundError as error:
+        raise HTTPException(status_code=422, detail="Creator not found") from error
 
 
 @router.put("/{script_id}", response_model=ScriptOut)

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from .models import can_transition
 from .orm.models import Creator, Script
-from .schemas import ScriptUpdate
+from .schemas import ScriptCreate, ScriptUpdate
 
 
 class CreatorNotFoundError(Exception):
@@ -48,3 +48,16 @@ def delete_script(db: Session, script: Script) -> None:
     """Delete the given script from the database."""
     db.delete(script)
     db.commit()
+
+
+def create_script(db: Session, data: ScriptCreate) -> Script:
+    """Create a script. It always starts in the 'idea' status."""
+    _ensure_creator_exists(db, data.creator_id)
+
+    script = Script(**data.model_dump())
+
+    db.add(script)
+    db.commit()
+    db.refresh(script)
+
+    return script
