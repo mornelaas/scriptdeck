@@ -1,13 +1,19 @@
 import typer
+from pydantic import ValidationError
 
-from .create_scripts import create_script
 from .models import ScriptStatus
 from .orm.models import Script
 from .orm.session import SessionLocal
 from .query import scripts_per_creator, scripts_per_status
 from .read_scripts import list_scripts
-from .schemas import ScriptUpdate
-from .services import InvalidTransitionError, delete_script, update_script
+from .schemas import ScriptCreate, ScriptUpdate
+from .services import (
+    CreatorNotFoundError,
+    InvalidTransitionError,
+    create_script,
+    delete_script,
+    update_script,
+)
 
 app = typer.Typer()
 
@@ -25,16 +31,27 @@ def list_all(creator_id: int | None = None, status: str | None = None) -> None:
 @app.command()
 def add(
     title: str,
-    status: str = "idea",
     platform: str | None = None,
     hook: str | None = None,
     creator_id: int | None = None,
 ) -> None:
-    """Create a script into table scripts"""
-    new_id = create_script(
-        title=title, status=status, platform=platform, hook=hook, creator_id=creator_id
-    )
-    print(f"Created script #{new_id}: {title}")
+    """Create a new script. It always starts in the 'idea' status."""
+    try:
+        data = ScriptCreate(
+            title=title, platform=platform, hook=hook, creator_id=creator_id
+        )
+    except ValidationError as error:
+        print(error)
+        raise typer.Exit(code=1) from error
+
+    with SessionLocal() as db:
+        try:
+            script = create_script(db=db, data=data)
+        except CreatorNotFoundError as error:
+            print(error)
+            raise typer.Exit(code=1) from error
+
+        print(f"Created script #{script.id}: {script.title}")
 
 
 @app.command()
