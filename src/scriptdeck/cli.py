@@ -4,11 +4,12 @@ from pydantic import ValidationError
 from .models import ScriptStatus
 from .orm.models import Script
 from .orm.session import SessionLocal
-from .query import scripts_per_creator, scripts_per_status
 from .schemas import ScriptCreate, ScriptUpdate
 from .services import (
     CreatorNotFoundError,
     InvalidTransitionError,
+    count_scripts_by_creator,
+    count_scripts_by_status,
     create_script,
     delete_script,
     list_scripts,
@@ -97,17 +98,17 @@ def delete(script_id: int) -> None:
 
 @app.command()
 def stats() -> None:
-    """Stats of: Scripts by status and Scripts by creator"""
-    stat_scripts_per_status = scripts_per_status()
-    stat_scripts_per_creator = scripts_per_creator()
+    """Show how many scripts there are by status and by creator."""
+    with SessionLocal() as db:
+        count_by_status = count_scripts_by_status(db=db)
+        print("Scripts by status:")
+        for status, count in count_by_status.items():
+            print(f"  {status.value}: {count}")
 
-    print("Scripts by status:")
-    for status, count in stat_scripts_per_status:
-        print(f"  {status}: {count}")
-
-    print("Scripts by creator:")
-    for creator, count in stat_scripts_per_creator:
-        print(f"  {creator}: {count}")
+        count_by_creator = count_scripts_by_creator(db=db)
+        print("Scripts by creator:")
+        for creator_id, count in count_by_creator.items():
+            print(f"  {creator_id}: {count}")
 
 
 if __name__ == "__main__":
