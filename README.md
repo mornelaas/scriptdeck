@@ -55,13 +55,14 @@ Once installed, the `scriptdeck` command is available in your terminal.
 # List all scripts
 scriptdeck list-all
 
-# Filter by status or creator
+# Filter by status, creator or platform
 scriptdeck list-all --status borrador
 scriptdeck list-all --creator-id 3
+scriptdeck list-all --platform tiktok
 scriptdeck list-all --status listo --creator-id 3
 
-# Create a script
-scriptdeck add "How I started my startup" --platform youtube --status borrador
+# Create a script (it always starts in idea)
+scriptdeck add "How I started my startup" --platform youtube
 
 # Update a script's status
 scriptdeck update 7 grabado
@@ -97,7 +98,7 @@ The API runs at http://127.0.0.1:8000. Interactive docs:
 | PUT | `/scripts/{script_id}` | Replace a script's content → 200 (404 / 422) |
 | PATCH | `/scripts/{script_id}` | Update only the fields sent → 200 (404 / 409 / 422) |
 | DELETE | `/scripts/{script_id}` | Delete a script → 204 (404 if it doesn't exist) |
-| GET | `/creators` | List all creators |
+| GET | `/creators` | List creators, optionally filtered by `niche` |
 | POST | `/creators` | Create a creator → 201 (422 if the body is invalid) |
 | PATCH | `/creators/{creator_id}` | Update only the fields sent → 200 (404 / 422 if the handle doesn't start with @) |
 | GET | `/creators/{creator_id}/scripts` | List a creator's scripts (404 if the creator doesn't exist) |
@@ -129,21 +130,16 @@ scriptdeck/
 │       │   ├── creators.py     # /creators endpoints
 │       │   └── scripts.py      # /scripts endpoints
 │       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep, ScriptDep, CreatorDep)
+│       ├── services.py         # Script operations shared by the API and the CLI (service layer)
 │       ├── orm/                # SQLAlchemy ORM: engine, sessions and models
 │       │   ├── __init__.py     # Makes orm/ a Python package
 │       │   ├── models.py       # Script and Creator mapped to the existing tables
 │       │   └── session.py      # Engine, session factory and get_db
 │       ├── cli.py              # CLI commands (Typer)
-│       ├── database.py         # Legacy sqlite3 schema and connection (used by the CLI)
+│       ├── database.py         # Creates the SQLite tables (init_db); Alembic migrations will replace it
 │       ├── models.py           # ScriptStatus enum
 │       ├── schemas.py          # Pydantic schemas (Create / Update / Out)
-│       ├── create_scripts.py   # Insert scripts
-│       ├── create_creators.py  # Insert creators
-│       ├── read_scripts.py     # Read scripts with filters
-│       ├── read_creators.py    # Read creators
-│       ├── update_delete.py    # Update and delete operations
-│       ├── query.py            # Joins, aggregations, subqueries
-│       └── seed.py             # Fake data for development
+│       └── seed.py             # Fake data for development, written through the ORM
 ├── .env.example                # Template for your local .env (copy it and fill it in)
 ├── pyproject.toml              # Project metadata, dependencies and tooling config
 ├── uv.lock                     # Exact versions of every dependency
@@ -152,19 +148,22 @@ scriptdeck/
 
 ## Architecture
 
-Every API endpoint talks to the database through the SQLAlchemy ORM:
+The API and the CLI are two entry points to the same service layer. The script operations live in `services.py`, and both call them instead of repeating the logic:
 
 ```
-request → router → dependencies (SessionDep, ScriptDep) → ORM session → SQLite
+HTTP request → router ─┐
+                       ├→ services.py → ORM session → SQLite
+CLI command  → cli.py ─┘
 ```
 
-- `SessionDep` opens one session per request (`get_db`) and always closes it.
-- `ScriptDep` loads the script from the path or stops the request with a 404 (`get_script_or_404`).
+- `services.py` holds the script rules: the creator must exist, and status changes follow the state machine.
+- It raises domain errors (`CreatorNotFoundError`, `InvalidTransitionError`), and each entry point translates them: the API into HTTP status codes (422, 409), the CLI into a message and exit code 1.
+- The API gets its session from `SessionDep`, which opens one session per request (`get_db`) and always closes it. The CLI opens its own with `with SessionLocal() as db:`.
+- `ScriptDep` and `CreatorDep` load the resource from the path or stop the request with a 404 (`get_script_or_404`, `get_creator_or_404`).
+- The `/creators` endpoints are simpler and still use the ORM session directly from their router.
 - Writes follow the session cycle: `add` → `commit` → `refresh`.
 - SQLite foreign keys are enforced on every ORM connection (`PRAGMA foreign_keys=ON`).
 - `created_at`, `updated_at` and `status` are filled by the database; `updated_at` changes on every update.
-
-> The Typer CLI still uses the legacy `sqlite3` data layer. It will move to the ORM before the PostgreSQL migration.
 
 ## Development
 
@@ -182,6 +181,6 @@ python -m scriptdeck.seed
 
 ## Project status
 
-Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource), and every endpoint (reads and writes) talks to the database through the SQLAlchemy ORM; only the CLI still uses `sqlite3`. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
+Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource). The API and the CLI share a service layer for script operations, and both talk to the database through the SQLAlchemy ORM. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
 
-Built as a learning project while working through a backend engineering roadmap. Next steps: moving the CLI to the ORM, migration to PostgreSQL, JWT authentication and a test suite with pytest.
+Built as a learning project while working through a backend engineering roadmap. Next steps: migration to PostgreSQL with Alembic, JWT authentication and a test suite with pytest.
