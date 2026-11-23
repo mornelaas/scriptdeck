@@ -1,52 +1,51 @@
 import random
-import sqlite3
 
 import faker
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from scriptdeck.models import ScriptStatus
+from scriptdeck.orm.models import Creator, Script
+from scriptdeck.orm.session import SessionLocal
 
 fake = faker.Faker()
 
 niches = ["finanzas", "fitness", "tech", "gaming", "cocina"]
-statuses = [s.value for s in ScriptStatus]
+statuses = list(ScriptStatus)
 platforms = ["youtube", "tiktok", "instagram", "linkedin"]
 
 
-def seed_creators() -> None:
-    with sqlite3.connect("scriptdeck.db") as con:
-        cursor = con.cursor()
+def seed_creators(db: Session) -> None:
+    """Add 5 fake creators to the database."""
+    for _ in range(5):
+        creator = Creator(
+            name=fake.name(),
+            handle=fake.user_name(),
+            niche=random.choice(niches),
+        )
 
-        for _ in range(5):
-            name = fake.name()
-            handle = fake.user_name()
-            niche = random.choice(niches)
-            cursor.execute(
-                "INSERT INTO creators (name, niche, handle) VALUES (?, ?, ?)",
-                (name, niche, handle),
-            )
+        db.add(creator)
+    db.commit()
 
 
-def seed_scripts() -> None:
-    with sqlite3.connect("scriptdeck.db") as con:
-        cursor = con.cursor()
+def seed_scripts(db: Session) -> None:
+    """Add 15 fake scripts to the database."""
+    creator_ids = db.scalars(select(Creator.id)).all()
 
-        cursor.execute("SELECT id FROM creators")
-        creator_ids: list[int] = [row[0] for row in cursor.fetchall()]
-
-        for _ in range(15):
-            title = fake.sentence(nb_words=4)
-            status = random.choice(statuses)
-            platform = random.choice(platforms)
-            hook = fake.sentence(nb_words=8)
-            creator_id = random.choice(creator_ids)
-            cursor.execute(
-                "INSERT INTO scripts (title, status, platform, hook, creator_id) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (title, status, platform, hook, creator_id),
-            )
+    for _ in range(15):
+        script = Script(
+            title=fake.sentence(nb_words=4),
+            status=random.choice(statuses),
+            platform=random.choice(platforms),
+            hook=fake.sentence(nb_words=8),
+            creator_id=random.choice(creator_ids),
+        )
+        db.add(script)
+    db.commit()
 
 
 if __name__ == "__main__":
-    seed_creators()
-    seed_scripts()
+    with SessionLocal() as db:
+        seed_creators(db=db)
+        seed_scripts(db=db)
     print("Seeded creators and scripts!")

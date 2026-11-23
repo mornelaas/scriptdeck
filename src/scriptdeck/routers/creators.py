@@ -22,11 +22,8 @@ def read_creators(db: SessionDep, niche: str | None = None) -> Sequence[Creator]
 
 
 @router.get("/{creator_id}/scripts", response_model=list[ScriptOut])
-def read_creator_scripts(creator_id: int, db: SessionDep) -> list[Script]:
+def read_creator_scripts(creator: CreatorDep) -> list[Script]:
     """Return all scripts of a creator."""
-    creator = db.get(Creator, creator_id)
-    if creator is None:
-        raise HTTPException(status_code=404, detail="Creator not found")
     return creator.scripts
 
 

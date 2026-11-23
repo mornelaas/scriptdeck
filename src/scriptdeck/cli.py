@@ -1,71 +1,114 @@
 import typer
+from pydantic import ValidationError
 
-from .create_scripts import create_script
-from .query import scripts_per_creator, scripts_per_status
-from .read_scripts import list_scripts
-from .update_delete import delete_script, update_status_script
+from .models import ScriptStatus
+from .orm.models import Script
+from .orm.session import SessionLocal
+from .schemas import ScriptCreate, ScriptUpdate
+from .services import (
+    CreatorNotFoundError,
+    InvalidTransitionError,
+    count_scripts_by_creator,
+    count_scripts_by_status,
+    create_script,
+    delete_script,
+    list_scripts,
+    update_script,
+)
 
 app = typer.Typer()
 
 
 @app.command()
-def list_all(creator_id: int | None = None, status: str | None = None) -> None:
-    """List all scripts in the database."""
-    scripts = list_scripts(creator_id=creator_id, status=status)
+def list_all(
+    status: ScriptStatus | None = None,
+    creator_id: int | None = None,
+    platform: str | None = None,
+) -> None:
+    """List scripts, optionally filtered by status, creator and platform."""
+
+    with SessionLocal() as db:
+        scripts = list_scripts(
+            db=db, status=status, creator_id=creator_id, platform=platform
+        )
+
     for script in scripts:
         print(
-            f"#{script[0]} title: {script[1]} status: {script[2]} platform: {script[3]}"
+            f"#{script.id} title: {script.title} "
+            f"status: {script.status.value} platform: {script.platform}"
         )
 
 
 @app.command()
 def add(
     title: str,
-    status: str = "idea",
     platform: str | None = None,
     hook: str | None = None,
     creator_id: int | None = None,
 ) -> None:
-    """Create a script into table scripts"""
-    new_id = create_script(
-        title=title, status=status, platform=platform, hook=hook, creator_id=creator_id
-    )
-    print(f"Created script #{new_id}: {title}")
+    """Create a new script. It always starts in the 'idea' status."""
+    try:
+        data = ScriptCreate(
+            title=title, platform=platform, hook=hook, creator_id=creator_id
+        )
+    except ValidationError as error:
+        print(error)
+        raise typer.Exit(code=1) from error
+
+    with SessionLocal() as db:
+        try:
+            script = create_script(db=db, data=data)
+        except CreatorNotFoundError as error:
+            print(error)
+            raise typer.Exit(code=1) from error
+
+        print(f"Created script #{script.id}: {script.title}")
 
 
 @app.command()
-def update(script_id: int, status: str) -> None:
-    """Update a script status into table scripts"""
-    was_updated = update_status_script(status=status, script_id=script_id)
-    if was_updated:
-        print(f"The script {script_id} change status to: {status}")
-    else:
-        print("None script was updated")
+def update(script_id: int, status: ScriptStatus) -> None:
+    """Change the status of a script, following the state machine."""
+    with SessionLocal() as db:
+        script = db.get(Script, script_id)
+        if script is None:
+            print(f"Script #{script_id} not found")
+            raise typer.Exit(code=1)
+
+        try:
+            update_script(db, script, ScriptUpdate(status=status))
+        except InvalidTransitionError as error:
+            print(error)
+            raise typer.Exit(code=1) from error
+
+        print(f"Script #{script_id} moved to: {status.value}")
 
 
 @app.command()
 def delete(script_id: int) -> None:
-    """Delete script from table scripts"""
-    was_deleted = delete_script(script_id=script_id)
-    if was_deleted:
-        print(f"The script {script_id} was deleted")
-    else:
-        print("None script was deleted")
+    """Delete a script for good."""
+    with SessionLocal() as db:
+        script = db.get(Script, script_id)
+        if script is None:
+            print(f"Script #{script_id} not found")
+            raise typer.Exit(code=1)
+
+        delete_script(db, script)
+        print(f"Script #{script_id} deleted")
 
 
 @app.command()
 def stats() -> None:
-    """Stats of: Scripts by status and Scripts by creator"""
-    stat_scripts_per_status = scripts_per_status()
-    stat_scripts_per_creator = scripts_per_creator()
+    """Show how many scripts there are by status and by creator."""
+    with SessionLocal() as db:
+        count_by_status = count_scripts_by_status(db=db)
+        print("Scripts by status:")
+        for status, count in count_by_status.items():
+            print(f"  {status.value}: {count}")
 
-    print("Scripts by status:")
-    for status, count in stat_scripts_per_status:
-        print(f"  {status}: {count}")
-
-    print("Scripts by creator:")
-    for creator, count in stat_scripts_per_creator:
-        print(f"  {creator}: {count}")
+        count_by_creator = count_scripts_by_creator(db=db)
+        print("Scripts by creator:")
+        for creator_id, count in count_by_creator.items():
+            print(f"  {creator_id}: {count}")
 
 
 if __name__ == "__main__":
