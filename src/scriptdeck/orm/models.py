@@ -34,7 +34,9 @@ class Creator(Base):
         DateTime(timezone=True), server_default=func.current_timestamp()
     )
 
-    scripts: Mapped[list["Script"]] = relationship(back_populates="creator")
+    scripts: Mapped[list["Script"]] = relationship(
+        back_populates="creator", cascade="all, delete", passive_deletes=True
+    )
 
 
 class Script(Base):
@@ -64,7 +66,7 @@ class Script(Base):
         onupdate=func.current_timestamp(),
     )
     creator_id: Mapped[int | None] = mapped_column(
-        ForeignKey("creators.id"), index=True
+        ForeignKey("creators.id", ondelete="CASCADE"), index=True
     )
 
     creator: Mapped["Creator | None"] = relationship(back_populates="scripts")
