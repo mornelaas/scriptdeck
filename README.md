@@ -5,8 +5,10 @@ A backend for content creators to manage their scripts through a production life
 ## Tech Stack
 
 - **Python 3.12+**
-- **SQLite** — embedded relational database
+- **PostgreSQL 18** — relational database server
 - **SQLAlchemy** — ORM that maps the tables to Python classes
+- **psycopg 3** — PostgreSQL driver that SQLAlchemy uses under the hood
+- **Alembic** — versioned database migrations generated from the models
 - **FastAPI** — REST API framework built on type hints
 - **Pydantic** — request and response validation with type hints
 - **pydantic-settings** — configuration from environment variables and `.env`
@@ -38,12 +40,29 @@ uv sync
 # 3. Activate it
 source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 
-# 4. Create the database
-python -m scriptdeck.database
-
-# 5. Create your local configuration from the template
+# 4. Create your local configuration from the template
 cp .env.example .env
 ```
+
+### Database
+
+ScriptDeck needs a running PostgreSQL 18 server. On macOS, [Postgres.app](https://postgresapp.com/) is the easiest way to get one.
+
+Create a role for the app and a database it owns. In `psql`, connected as your superuser:
+
+```sql
+CREATE ROLE scriptdeck_app WITH LOGIN;
+\password scriptdeck_app
+CREATE DATABASE scriptdeck OWNER scriptdeck_app;
+```
+
+Put that password in `DATABASE_URL` in your `.env` (letters and numbers only, so the URL stays valid). Then create the tables:
+
+```bash
+alembic upgrade head
+```
+
+The app connects with its own role instead of a superuser (least privilege): if its credentials ever leak, they only reach the `scriptdeck` database.
 
 ## Usage
 
@@ -133,13 +152,18 @@ scriptdeck/
 │       ├── services.py         # Script operations shared by the API and the CLI (service layer)
 │       ├── orm/                # SQLAlchemy ORM: engine, sessions and models
 │       │   ├── __init__.py     # Makes orm/ a Python package
-│       │   ├── models.py       # Script and Creator mapped to the existing tables
+│       │   ├── models.py       # Script and Creator models: the source of truth for the schema
 │       │   └── session.py      # Engine, session factory and get_db
 │       ├── cli.py              # CLI commands (Typer)
-│       ├── database.py         # Creates the SQLite tables (init_db); Alembic migrations will replace it
 │       ├── models.py           # ScriptStatus enum
 │       ├── schemas.py          # Pydantic schemas (Create / Update / Out)
 │       └── seed.py             # Fake data for development, written through the ORM
+├── migrations/                 # Alembic migration environment
+│   ├── env.py                  # Connects Alembic to DATABASE_URL and the ORM models
+│   └── versions/               # One file per schema change, each with upgrade and downgrade
+├── tools/
+│   └── migrate_sqlite_to_postgres.py  # One-off copy of the old SQLite data into PostgreSQL
+├── alembic.ini                 # Alembic configuration (no database URL: it comes from .env)
 ├── .env.example                # Template for your local .env (copy it and fill it in)
 ├── pyproject.toml              # Project metadata, dependencies and tooling config
 ├── uv.lock                     # Exact versions of every dependency
@@ -152,7 +176,7 @@ The API and the CLI are two entry points to the same service layer. The script o
 
 ```
 HTTP request → router ─┐
-                       ├→ services.py → ORM session → SQLite
+                       ├→ services.py → ORM session → PostgreSQL
 CLI command  → cli.py ─┘
 ```
 
@@ -162,8 +186,12 @@ CLI command  → cli.py ─┘
 - `ScriptDep` and `CreatorDep` load the resource from the path or stop the request with a 404 (`get_script_or_404`, `get_creator_or_404`).
 - The `/creators` endpoints are simpler and still use the ORM session directly from their router.
 - Writes follow the session cycle: `add` → `commit` → `refresh`.
-- SQLite foreign keys are enforced on every ORM connection (`PRAGMA foreign_keys=ON`).
-- `created_at`, `updated_at` and `status` are filled by the database; `updated_at` changes on every update.
+- The ORM models are the source of truth for the schema. Alembic turns every change into a versioned migration in `migrations/versions/`.
+- `created_at` and `updated_at` are `timestamptz`: each one stores an exact instant, in UTC.
+- `status` is a native PostgreSQL ENUM (`scriptstatus`), so `ORDER BY status` follows the lifecycle, from `idea` to `publicado`.
+- Deleting a creator deletes their scripts: `ON DELETE CASCADE` in the database, plus `cascade="all, delete"` and `passive_deletes=True` on the relationship, so the ORM leaves the cascade to PostgreSQL.
+- `scripts.status` and `scripts.creator_id` are indexed, and every constraint follows a naming convention (`pk_scripts`, `fk_scripts_creator_id_creators`), so migrations can refer to them by name.
+- `created_at`, `updated_at` and `status` get their defaults from the database; SQLAlchemy refreshes `updated_at` on every ORM update.
 
 ## Development
 
@@ -179,8 +207,26 @@ pre-commit install
 python -m scriptdeck.seed
 ```
 
+### Database migrations
+
+```bash
+# After changing the models: generate a migration, then review it line by line
+alembic revision --autogenerate -m "describe the change"
+
+# Apply every pending migration
+alembic upgrade head
+
+# Undo the last migration
+alembic downgrade -1
+
+# Show which revision the database is at
+alembic current
+```
+
+Autogenerate writes a draft, so always review it before applying it. For example, it does not drop PostgreSQL ENUM types in `downgrade`.
+
 ## Project status
 
-Working CLI and REST API over a normalized SQLite database: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, enforced foreign keys and an index on `status`. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource). The API and the CLI share a service layer for script operations, and both talk to the database through the SQLAlchemy ORM. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
+Working CLI and REST API over PostgreSQL, with the schema versioned by Alembic migrations: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, foreign keys with `ON DELETE CASCADE`, and indexes on `status` and `creator_id`. The data from the original SQLite version was copied with a one-off script and checked row by row. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource). The API and the CLI share a service layer for script operations, and both talk to the database through the SQLAlchemy ORM. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
 
-Built as a learning project while working through a backend engineering roadmap. Next steps: migration to PostgreSQL with Alembic, JWT authentication and a test suite with pytest.
+Built as a learning project while working through a backend engineering roadmap. Next steps: JWT authentication, a test suite with pytest and a public deployment.
