@@ -104,7 +104,7 @@ def count_scripts_by_creator(db: Session) -> dict[int | None, int]:
     stmt = (
         select(Script.creator_id, func.count())
         .group_by(Script.creator_id)
-        .order_by(Script.creator_id)
+        .order_by(Script.creator_id.nulls_first())
     )
 
     counts: dict[int | None, int] = {}
