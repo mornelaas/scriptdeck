@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from scriptdeck.models import ScriptStatus
 
@@ -53,4 +53,18 @@ class CreatorUpdate(BaseModel):
 class CreatorOut(CreatorBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    created_at: datetime
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=15, max_length=128)
+
+
+class UserOut(BaseModel):
+    """Show the user, but never show the password or hash."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: EmailStr
     created_at: datetime
