@@ -70,3 +70,16 @@ class Script(Base):
     )
 
     creator: Mapped["Creator | None"] = relationship(back_populates="scripts")
+
+
+class User(Base):
+    """A registered user who can log in."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(unique=True)
+    hashed_password: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.current_timestamp()
+    )
