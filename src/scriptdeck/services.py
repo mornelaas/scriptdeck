@@ -5,9 +5,11 @@ from collections.abc import Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from scriptdeck.security import hash_password
+
 from .models import ScriptStatus, can_transition
-from .orm.models import Creator, Script
-from .schemas import ScriptCreate, ScriptUpdate
+from .orm.models import Creator, Script, User
+from .schemas import ScriptCreate, ScriptUpdate, UserCreate
 
 
 class CreatorNotFoundError(Exception):
@@ -16,6 +18,10 @@ class CreatorNotFoundError(Exception):
 
 class InvalidTransitionError(Exception):
     """Raised when a status change breaks the script state machine."""
+
+
+class EmailAlreadyRegisteredError(Exception):
+    """Raised when someone tries to register an email that is already in use."""
 
 
 def _ensure_creator_exists(db: Session, creator_id: int | None) -> None:
@@ -113,3 +119,26 @@ def count_scripts_by_creator(db: Session) -> dict[int | None, int]:
         counts[creator_id] = count
 
     return counts
+
+
+def _get_user_by_email(db: Session, email: str) -> User | None:
+    """Return the user with this email, or None if there is none."""
+    return db.scalar(select(User).where(User.email == email))
+
+
+def register_user(db: Session, data: UserCreate) -> User:
+    """Create a user with a hashed password, unless the email is already registered."""
+    existing_user = _get_user_by_email(db=db, email=data.email.lower())
+
+    if existing_user is not None:
+        raise EmailAlreadyRegisteredError(
+            f"This email: {existing_user.email} is already in use."
+        )
+
+    user = User(email=data.email.lower(), hashed_password=hash_password(data.password))
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
