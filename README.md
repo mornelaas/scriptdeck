@@ -11,7 +11,9 @@ A backend for content creators to manage their scripts through a production life
 - **Alembic** — versioned database migrations generated from the models
 - **FastAPI** — REST API framework built on type hints
 - **Pydantic** — request and response validation with type hints
+- **email-validator** — email format checks for Pydantic's `EmailStr`
 - **pydantic-settings** — configuration from environment variables and `.env`
+- **pwdlib + Argon2id** — password hashing
 - **Uvicorn** — ASGI server that runs the API
 - **Typer** — CLI framework built on type hints
 - **Ruff** — linter + formatter
@@ -121,12 +123,16 @@ The API runs at http://127.0.0.1:8000. Interactive docs:
 | POST | `/creators` | Create a creator → 201 (422 if the body is invalid) |
 | PATCH | `/creators/{creator_id}` | Update only the fields sent → 200 (404 / 422 if the handle doesn't start with @) |
 | GET | `/creators/{creator_id}/scripts` | List a creator's scripts (404 if the creator doesn't exist) |
+| POST | `/auth/register` | Register a user → 201 (409 if the email is already registered, 422 if the email is invalid or the password is shorter than 15 characters) |
 
 Business rules:
 
 - Every new script starts in `idea`: the create body has no `status`.
 - `PUT` replaces a script's content but keeps its `status`.
 - Status changes go through `PATCH`, one step at a time; any other move returns 409.
+- Emails are stored in lowercase, so `Orne@Example.com` and `orne@example.com` are the same account.
+- Passwords must be 15 to 128 characters long, following NIST SP 800-63B for password-only logins.
+- Passwords are never stored: only their Argon2id hash, with a random salt per user. Responses never include the password or its hash.
 
 Example:
 
@@ -146,13 +152,15 @@ scriptdeck/
 │       ├── config.py           # Settings read from environment variables and .env
 │       ├── routers/            # API endpoints, one router per resource
 │       │   ├── __init__.py     # Makes routers/ a Python package
+│       │   ├── auth.py         # /auth endpoints (registration)
 │       │   ├── creators.py     # /creators endpoints
 │       │   └── scripts.py      # /scripts endpoints
 │       ├── dependencies.py     # Shared FastAPI dependencies (SessionDep, ScriptDep, CreatorDep)
-│       ├── services.py         # Script operations shared by the API and the CLI (service layer)
+│       ├── services.py         # Script and user operations shared by the API and the CLI (service layer)
+│       ├── security.py         # Password hashing and verification with Argon2id (pwdlib)
 │       ├── orm/                # SQLAlchemy ORM: engine, sessions and models
 │       │   ├── __init__.py     # Makes orm/ a Python package
-│       │   ├── models.py       # Script and Creator models: the source of truth for the schema
+│       │   ├── models.py       # Script, Creator and User models: the source of truth for the schema
 │       │   └── session.py      # Engine, session factory and get_db
 │       ├── cli.py              # CLI commands (Typer)
 │       ├── models.py           # ScriptStatus enum
@@ -182,6 +190,7 @@ CLI command  → cli.py ─┘
 
 - `services.py` holds the script rules: the creator must exist, and status changes follow the state machine.
 - It raises domain errors (`CreatorNotFoundError`, `InvalidTransitionError`), and each entry point translates them: the API into HTTP status codes (422, 409), the CLI into a message and exit code 1.
+- Registration follows the same pattern: `register_user` lowercases the email, raises `EmailAlreadyRegisteredError` if it is taken (the API returns 409), and stores only the password hash. Hashing lives in `security.py`, so the rest of the app never touches the hashing library.
 - The API gets its session from `SessionDep`, which opens one session per request (`get_db`) and always closes it. The CLI opens its own with `with SessionLocal() as db:`.
 - `ScriptDep` and `CreatorDep` load the resource from the path or stop the request with a 404 (`get_script_or_404`, `get_creator_or_404`).
 - The `/creators` endpoints are simpler and still use the ORM session directly from their router.
@@ -191,6 +200,7 @@ CLI command  → cli.py ─┘
 - `status` is a native PostgreSQL ENUM (`scriptstatus`), so `ORDER BY status` follows the lifecycle, from `idea` to `publicado`.
 - Deleting a creator deletes their scripts: `ON DELETE CASCADE` in the database, plus `cascade="all, delete"` and `passive_deletes=True` on the relationship, so the ORM leaves the cascade to PostgreSQL.
 - `scripts.status` and `scripts.creator_id` are indexed, and every constraint follows a naming convention (`pk_scripts`, `fk_scripts_creator_id_creators`), so migrations can refer to them by name.
+- `users.email` has a unique constraint (`uq_users_email`), backed by its own index: the database rejects a duplicate email even if two requests arrive at the same time.
 - `created_at`, `updated_at` and `status` get their defaults from the database; SQLAlchemy refreshes `updated_at` on every ORM update.
 
 ## Development
@@ -227,6 +237,6 @@ Autogenerate writes a draft, so always review it before applying it. For example
 
 ## Project status
 
-Working CLI and REST API over PostgreSQL, with the schema versioned by Alembic migrations: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, foreign keys with `ON DELETE CASCADE`, and indexes on `status` and `creator_id`. The data from the original SQLite version was copied with a one-off script and checked row by row. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource). The API and the CLI share a service layer for script operations, and both talk to the database through the SQLAlchemy ORM. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings.
+Working CLI and REST API over PostgreSQL, with the schema versioned by Alembic migrations: full CRUD for scripts from both the CLI and the API, filtered listing, aggregate statistics, foreign keys with `ON DELETE CASCADE`, and indexes on `status` and `creator_id`. The data from the original SQLite version was copied with a one-off script and checked row by row. The API validates requests and responses with Pydantic schemas and returns proper status codes (201, 204, 404, 409, 422), and status changes follow the script state machine. Type hints across every function and zero Ruff warnings. The API is organized in routers (one per resource). The API and the CLI share a service layer for script operations, and both talk to the database through the SQLAlchemy ORM. Configuration (the database URL) is read from environment variables and a local `.env` file with pydantic-settings. Users can register: emails are unique and stored in lowercase, and passwords are stored only as Argon2id hashes.
 
-Built as a learning project while working through a backend engineering roadmap. Next steps: JWT authentication, a test suite with pytest and a public deployment.
+Built as a learning project while working through a backend engineering roadmap. Next steps: JWT login and protected routes, a test suite with pytest and a public deployment.

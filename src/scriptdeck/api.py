@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 
-from .routers import creators, scripts
+from .routers import auth, creators, scripts
 
 app = FastAPI()
 
 app.include_router(scripts.router)
 app.include_router(creators.router)
+app.include_router(auth.router)
 
 
 @app.get("/")
